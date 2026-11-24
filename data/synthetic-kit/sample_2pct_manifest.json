@@ -1,0 +1,21 @@
+{
+  "generator": "generate_ahd.py",
+  "scale": 0.02,
+  "period": "2024-01-01..2025-12-31",
+  "synthetic": true,
+  "row_counts": {
+    "ehr_cerner/diagnoses.csv": 26752,
+    "ehr_cerner/encounters.csv": 16035,
+    "ehr_cerner/patients.csv": 3303,
+    "lis_hl7/*.hl7 (messages)": 21611,
+    "lis_hl7/*.hl7 (OBX results)": 61450,
+    "pharmacy_api/*.jsonl": 23921,
+    "erp_oracle/*.xml (transactions)": 33069,
+    "billing_oracle/claims.csv": 14996,
+    "ehr_cerner/clinical_notes.jsonl": 1851,
+    "feedback/patient_feedback.csv": 1932,
+    "icu_monitors/icu_events.csv": 12,
+    "icu_monitors/vitals_stream/*.jsonl": 455315
+  },
+  "total_rows": 638636
+}

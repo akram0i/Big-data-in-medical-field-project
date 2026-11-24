@@ -1,0 +1,74 @@
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/usr/share/apache-hive-2.1.1-bin/lib/log4j-slf4j-impl-2.4.1.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/usr/share/hadoop-2.7.3/share/hadoop/common/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+
+Logging initialized using configuration in jar:file:/usr/share/apache-hive-2.1.1-bin/lib/hive-common-2.1.1.jar!/hive-log4j2.properties Async: true
+OK
+Time taken: 1.023 seconds
+OK
+Time taken: 0.123 seconds
+OK
+Time taken: 0.476 seconds
+OK
+Time taken: 0.107 seconds
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = bigdata_20261124021818_feac16bc-f5a5-4996-9fee-864c39c6781a
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1795440509867_0017, Tracking URL = http://bigdata-VirtualBox:8088/proxy/application_1795440509867_0017/
+Kill Command = /usr/share/hadoop/bin/hadoop job  -kill job_1795440509867_0017
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2026-11-24 02:18:34,871 Stage-1 map = 0%,  reduce = 0%
+2026-11-24 02:19:03,976 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 27.28 sec
+MapReduce Total cumulative CPU time: 27 seconds 280 msec
+Ended Job = job_1795440509867_0017
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to directory hdfs://localhost:8020/user/hive/warehouse/ahd.db/.hive-staging_hive_2026-11-24_02-18-18_603_983423373457188434-1/-ext-10002
+Moving data to directory hdfs://localhost:8020/user/hive/warehouse/ahd.db/stg_claims
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 27.28 sec   HDFS Read: 78234224 HDFS Write: 28710957 SUCCESS
+Total MapReduce CPU Time Spent: 27 seconds 280 msec
+OK
+Time taken: 47.314 seconds
+OK
+Time taken: 0.079 seconds
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = bigdata_20261124021906_9319087f-7139-4422-99a6-dfe6a7caff06
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks not specified. Estimated from input data size: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1795440509867_0018, Tracking URL = http://bigdata-VirtualBox:8088/proxy/application_1795440509867_0018/
+Kill Command = /usr/share/hadoop/bin/hadoop job  -kill job_1795440509867_0018
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2026-11-24 02:19:20,588 Stage-1 map = 0%,  reduce = 0%
+2026-11-24 02:19:48,125 Stage-1 map = 100%,  reduce = 100%
+Ended Job = job_1795440509867_0018 with errors
+Error during job, obtaining debugging information...
+Examining task ID: task_1795440509867_0018_m_000000 (and more) from job job_1795440509867_0018
+
+Task with the most failures(4): 
+-----
+Task ID:
+  task_1795440509867_0018_m_000000
+
+URL:
+  http://bigdata-VirtualBox:8088/taskdetails.jsp?jobid=job_1795440509867_0018&tipid=task_1795440509867_0018_m_000000
+-----
+Diagnostic Messages for this Task:
+Error: Java heap space
+
+FAILED: Execution Error, return code 2 from org.apache.hadoop.hive.ql.exec.mr.MapRedTask
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 1   HDFS Read: 0 HDFS Write: 0 FAIL
+Total MapReduce CPU Time Spent: 0 msec

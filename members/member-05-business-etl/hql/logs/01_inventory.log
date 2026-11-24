@@ -1,0 +1,143 @@
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/usr/share/apache-hive-2.1.1-bin/lib/log4j-slf4j-impl-2.4.1.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/usr/share/hadoop-2.7.3/share/hadoop/common/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+
+Logging initialized using configuration in jar:file:/usr/share/apache-hive-2.1.1-bin/lib/hive-common-2.1.1.jar!/hive-log4j2.properties Async: true
+OK
+Time taken: 1.039 seconds
+OK
+Time taken: 13.702 seconds
+OK
+Time taken: 0.562 seconds
+OK
+Time taken: 0.347 seconds
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = bigdata_20261124020010_febdad25-9171-4f58-82eb-478a9e9a2409
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1795440509867_0007, Tracking URL = http://bigdata-VirtualBox:8088/proxy/application_1795440509867_0007/
+Kill Command = /usr/share/hadoop/bin/hadoop job  -kill job_1795440509867_0007
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2026-11-24 02:00:35,063 Stage-1 map = 0%,  reduce = 0%
+2026-11-24 02:00:50,500 Stage-1 map = 4%,  reduce = 0%, Cumulative CPU 14.06 sec
+2026-11-24 02:00:56,530 Stage-1 map = 8%,  reduce = 0%, Cumulative CPU 20.44 sec
+2026-11-24 02:01:00,197 Stage-1 map = 12%,  reduce = 0%, Cumulative CPU 23.68 sec
+2026-11-24 02:01:03,154 Stage-1 map = 17%,  reduce = 0%, Cumulative CPU 26.62 sec
+2026-11-24 02:01:09,046 Stage-1 map = 21%,  reduce = 0%, Cumulative CPU 32.65 sec
+2026-11-24 02:01:12,738 Stage-1 map = 25%,  reduce = 0%, Cumulative CPU 35.55 sec
+2026-11-24 02:01:15,241 Stage-1 map = 29%,  reduce = 0%, Cumulative CPU 38.51 sec
+2026-11-24 02:01:18,703 Stage-1 map = 33%,  reduce = 0%, Cumulative CPU 41.77 sec
+2026-11-24 02:01:22,160 Stage-1 map = 37%,  reduce = 0%, Cumulative CPU 44.78 sec
+2026-11-24 02:01:24,555 Stage-1 map = 42%,  reduce = 0%, Cumulative CPU 47.73 sec
+2026-11-24 02:01:30,326 Stage-1 map = 46%,  reduce = 0%, Cumulative CPU 53.55 sec
+2026-11-24 02:01:34,290 Stage-1 map = 50%,  reduce = 0%, Cumulative CPU 56.39 sec
+2026-11-24 02:01:46,059 Stage-1 map = 54%,  reduce = 0%, Cumulative CPU 67.37 sec
+2026-11-24 02:01:50,890 Stage-1 map = 58%,  reduce = 0%, Cumulative CPU 72.08 sec
+2026-11-24 02:01:55,611 Stage-1 map = 62%,  reduce = 0%, Cumulative CPU 75.05 sec
+2026-11-24 02:02:01,743 Stage-1 map = 66%,  reduce = 0%, Cumulative CPU 81.93 sec
+2026-11-24 02:02:08,111 Stage-1 map = 71%,  reduce = 0%, Cumulative CPU 88.16 sec
+2026-11-24 02:02:11,120 Stage-1 map = 75%,  reduce = 0%, Cumulative CPU 90.85 sec
+2026-11-24 02:02:17,872 Stage-1 map = 79%,  reduce = 0%, Cumulative CPU 96.42 sec
+2026-11-24 02:02:23,552 Stage-1 map = 83%,  reduce = 0%, Cumulative CPU 102.06 sec
+2026-11-24 02:02:29,917 Stage-1 map = 87%,  reduce = 0%, Cumulative CPU 107.48 sec
+2026-11-24 02:02:35,418 Stage-1 map = 92%,  reduce = 0%, Cumulative CPU 113.21 sec
+2026-11-24 02:02:42,599 Stage-1 map = 96%,  reduce = 0%, Cumulative CPU 120.35 sec
+2026-11-24 02:02:50,038 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 127.44 sec
+MapReduce Total cumulative CPU time: 2 minutes 9 seconds 330 msec
+Ended Job = job_1795440509867_0007
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to directory hdfs://localhost:8020/user/hive/warehouse/ahd.db/.hive-staging_hive_2026-11-24_02-00-10_092_2493199743544815849-1/-ext-10002
+Moving data to directory hdfs://localhost:8020/user/hive/warehouse/ahd.db/stg_inventory
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 129.33 sec   HDFS Read: 20756209 HDFS Write: 2746387 SUCCESS
+Total MapReduce CPU Time Spent: 2 minutes 9 seconds 330 msec
+OK
+Time taken: 168.44 seconds
+OK
+Time taken: 0.38 seconds
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = bigdata_20261124020258_c8192243-1f62-4a77-aa4a-cb01fe96da42
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks not specified. Estimated from input data size: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1795440509867_0008, Tracking URL = http://bigdata-VirtualBox:8088/proxy/application_1795440509867_0008/
+Kill Command = /usr/share/hadoop/bin/hadoop job  -kill job_1795440509867_0008
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2026-11-24 02:03:35,852 Stage-1 map = 0%,  reduce = 0%
+2026-11-24 02:04:13,171 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 29.14 sec
+2026-11-24 02:04:28,595 Stage-1 map = 100%,  reduce = 69%, Cumulative CPU 36.21 sec
+2026-11-24 02:04:31,880 Stage-1 map = 100%,  reduce = 93%, Cumulative CPU 41.76 sec
+2026-11-24 02:04:34,303 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 45.0 sec
+MapReduce Total cumulative CPU time: 45 seconds 0 msec
+Ended Job = job_1795440509867_0008
+Moving data to directory hdfs://localhost:8020/user/hive/warehouse/ahd.db/chk_inventory
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 1   Cumulative CPU: 45.0 sec   HDFS Read: 2777279 HDFS Write: 2750703 SUCCESS
+Total MapReduce CPU Time Spent: 45 seconds 0 msec
+OK
+Time taken: 99.526 seconds
+OK
+Time taken: 5.032 seconds
+OK
+Time taken: 0.312 seconds
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = bigdata_20261124020443_e2c3735c-8265-40b5-94a7-64c1a9162a49
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1795440509867_0009, Tracking URL = http://bigdata-VirtualBox:8088/proxy/application_1795440509867_0009/
+Kill Command = /usr/share/hadoop/bin/hadoop job  -kill job_1795440509867_0009
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2026-11-24 02:05:01,385 Stage-1 map = 0%,  reduce = 0%
+2026-11-24 02:05:19,626 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 12.75 sec
+MapReduce Total cumulative CPU time: 15 seconds 530 msec
+Ended Job = job_1795440509867_0009
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to directory hdfs://localhost:8020/datalake/curated/cur_inventory/.hive-staging_hive_2026-11-24_02-04-43_841_8622420037133396862-1/-ext-10000
+Loading data to table ahd.cur_inventory partition (year=null, month=null)
+
+
+	 Time taken to load dynamic partitions: 6.983 seconds
+	 Time taken for adding to write entity : 0.009 seconds
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 15.53 sec   HDFS Read: 928387 HDFS Write: 950702 SUCCESS
+Total MapReduce CPU Time Spent: 15 seconds 530 msec
+OK
+Time taken: 53.734 seconds
+OK
+Time taken: 0.197 seconds
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = bigdata_20261124020537_b8341c9b-9480-4d7c-a6f1-4f8425c80577
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1795440509867_0010, Tracking URL = http://bigdata-VirtualBox:8088/proxy/application_1795440509867_0010/
+Kill Command = /usr/share/hadoop/bin/hadoop job  -kill job_1795440509867_0010
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2026-11-24 02:05:53,726 Stage-1 map = 0%,  reduce = 0%
+2026-11-24 02:06:06,578 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 4.55 sec
+MapReduce Total cumulative CPU time: 4 seconds 550 msec
+Ended Job = job_1795440509867_0010
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to directory hdfs://localhost:8020/user/hive/warehouse/ahd.db/.hive-staging_hive_2026-11-24_02-05-37_794_3216870720560478463-1/-ext-10002
+Moving data to directory hdfs://localhost:8020/user/hive/warehouse/ahd.db/rej_inventory
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 4.55 sec   HDFS Read: 2103051 HDFS Write: 24109 SUCCESS
+Total MapReduce CPU Time Spent: 4 seconds 550 msec
+OK
+Time taken: 33.166 seconds

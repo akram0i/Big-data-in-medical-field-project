@@ -1,0 +1,517 @@
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/opt/hive/lib/log4j-slf4j-impl-2.18.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/opt/hadoop/share/hadoop/common/lib/slf4j-reload4j-1.7.36.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/opt/hive/lib/log4j-slf4j-impl-2.18.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/opt/hadoop/share/hadoop/common/lib/slf4j-reload4j-1.7.36.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+Connecting to jdbc:hive2://localhost:10000/default
+Connected to: Apache Hive (version 4.0.1)
+Driver: Hive JDBC (version 4.0.1)
+Transaction isolation: TRANSACTION_REPEATABLE_READ
+26/11/23 19:35:57 [main]: WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+0: jdbc:hive2://localhost:10000/default> -- P1: Grain = admission month x department; patient-days are an interval overlap.
+0: jdbc:hive2://localhost:10000/default> -- The ROLLUP includes month subtotals and a grand total. OVERFLOW is not a bed.
+0: jdbc:hive2://localhost:10000/default> USE ahd_member7;
+INFO  : Compiling command(queryId=hive_20261123193558_e300dd70-1d47-4f37-8daf-fd0eb2332d80): USE ahd_member7
+INFO  : Semantic Analysis Completed (retrial = false)
+INFO  : Created Hive schema: Schema(fieldSchemas:null, properties:null)
+INFO  : Completed compiling command(queryId=hive_20261123193558_e300dd70-1d47-4f37-8daf-fd0eb2332d80); Time taken: 0.04 seconds
+INFO  : Concurrency mode is disabled, not creating a lock manager
+INFO  : Executing command(queryId=hive_20261123193558_e300dd70-1d47-4f37-8daf-fd0eb2332d80): USE ahd_member7
+INFO  : Starting task [Stage-0:DDL] in serial mode
+INFO  : Completed executing command(queryId=hive_20261123193558_e300dd70-1d47-4f37-8daf-fd0eb2332d80); Time taken: 0.009 seconds
+No rows affected (0.151 seconds)
+0: jdbc:hive2://localhost:10000/default> WITH clean AS (
+. . . . . . . . . . . . . . . . . . . .>   SELECT * FROM (
+. . . . . . . . . . . . . . . . . . . .>     SELECT e.*, row_number() OVER (PARTITION BY encounter_id ORDER BY admit_ts) rn
+. . . . . . . . . . . . . . . . . . . .>     FROM encounters e WHERE encounter_type = 'IP' AND admit_ts IS NOT NULL
+. . . . . . . . . . . . . . . . . . . .>   ) x WHERE rn = 1
+. . . . . . . . . . . . . . . . . . . .> ), monthly AS (
+. . . . . . . . . . . . . . . . . . . .>   SELECT m.month_key, e.department,
+. . . . . . . . . . . . . . . . . . . .>     sum(CASE WHEN substr(e.admit_ts,1,7) = m.month_key THEN 1 ELSE 0 END) admissions,
+. . . . . . . . . . . . . . . . . . . .>     sum(CASE WHEN substr(e.admit_ts,1,7) = m.month_key
+. . . . . . . . . . . . . . . . . . . .>                   AND e.bed_id = 'OVERFLOW' THEN 1 ELSE 0 END) overflow_admissions,
+. . . . . . . . . . . . . . . . . . . .>     sum(CASE WHEN e.bed_id LIKE 'W%'
+. . . . . . . . . . . . . . . . . . . .>         THEN greatest(0, datediff(least(to_date(coalesce(e.discharge_ts,
+. . . . . . . . . . . . . . . . . . . .>                                                        date_add(to_date(e.admit_ts),1))),
+. . . . . . . . . . . . . . . . . . . .>                                          to_date(m.next_date)),
+. . . . . . . . . . . . . . . . . . . .>                                   greatest(to_date(e.admit_ts), to_date(m.start_date))))
+. . . . . . . . . . . . . . . . . . . .>         ELSE 0 END) ward_bed_days
+. . . . . . . . . . . . . . . . . . . .>   FROM months m JOIN clean e
+. . . . . . . . . . . . . . . . . . . .>     ON to_date(e.admit_ts) < to_date(m.next_date)
+. . . . . . . . . . . . . . . . . . . .>    AND to_date(coalesce(e.discharge_ts, date_add(to_date(e.admit_ts),1))) >= to_date(m.start_date)
+. . . . . . . . . . . . . . . . . . . .>   GROUP BY m.month_key, e.department
+. . . . . . . . . . . . . . . . . . . .> )
+. . . . . . . . . . . . . . . . . . . .> SELECT month_key, department, grouping__id AS grouping_id,
+. . . . . . . . . . . . . . . . . . . .>        sum(admissions) AS admissions, sum(overflow_admissions) AS overflow_admissions,
+. . . . . . . . . . . . . . . . . . . .>        sum(ward_bed_days) AS ward_bed_days
+. . . . . . . . . . . . . . . . . . . .> FROM monthly
+. . . . . . . . . . . . . . . . . . . .> GROUP BY month_key, department WITH ROLLUP
+. . . . . . . . . . . . . . . . . . . .> ORDER BY month_key, department;
+INFO  : Compiling command(queryId=hive_20261123193558_819f1f67-18ec-4358-927b-2a21fdb7dec7): WITH clean AS (
+SELECT * FROM (
+SELECT e.*, row_number() OVER (PARTITION BY encounter_id ORDER BY admit_ts) rn
+FROM encounters e WHERE encounter_type = 'IP' AND admit_ts IS NOT NULL
+) x WHERE rn = 1
+), monthly AS (
+SELECT m.month_key, e.department,
+sum(CASE WHEN substr(e.admit_ts,1,7) = m.month_key THEN 1 ELSE 0 END) admissions,
+sum(CASE WHEN substr(e.admit_ts,1,7) = m.month_key
+AND e.bed_id = 'OVERFLOW' THEN 1 ELSE 0 END) overflow_admissions,
+sum(CASE WHEN e.bed_id LIKE 'W%'
+THEN greatest(0, datediff(least(to_date(coalesce(e.discharge_ts,
+date_add(to_date(e.admit_ts),1))),
+to_date(m.next_date)),
+greatest(to_date(e.admit_ts), to_date(m.start_date))))
+ELSE 0 END) ward_bed_days
+FROM months m JOIN clean e
+ON to_date(e.admit_ts) < to_date(m.next_date)
+AND to_date(coalesce(e.discharge_ts, date_add(to_date(e.admit_ts),1))) >= to_date(m.start_date)
+GROUP BY m.month_key, e.department
+)
+SELECT month_key, department, grouping__id AS grouping_id,
+sum(admissions) AS admissions, sum(overflow_admissions) AS overflow_admissions,
+sum(ward_bed_days) AS ward_bed_days
+FROM monthly
+GROUP BY month_key, department WITH ROLLUP
+ORDER BY month_key, department
+INFO  : No Stats for ahd_member7@months, Columns: month_key, start_date, next_date
+INFO  : No Stats for ahd_member7@encounters, Columns: bed_id, admit_ts, encounter_id, department, discharge_ts, encounter_type
+INFO  : Warning: Map Join MAPJOIN[34][bigTable=?] in task 'Reducer 3' is a cross product
+INFO  : Semantic Analysis Completed (retrial = false)
+INFO  : Created Hive schema: Schema(fieldSchemas:[FieldSchema(name:month_key, type:string, comment:null), FieldSchema(name:department, type:string, comment:null), FieldSchema(name:grouping_id, type:bigint, comment:null), FieldSchema(name:admissions, type:bigint, comment:null), FieldSchema(name:overflow_admissions, type:bigint, comment:null), FieldSchema(name:ward_bed_days, type:bigint, comment:null)], properties:null)
+INFO  : Completed compiling command(queryId=hive_20261123193558_819f1f67-18ec-4358-927b-2a21fdb7dec7); Time taken: 1.403 seconds
+INFO  : Concurrency mode is disabled, not creating a lock manager
+INFO  : Executing command(queryId=hive_20261123193558_819f1f67-18ec-4358-927b-2a21fdb7dec7): WITH clean AS (
+SELECT * FROM (
+SELECT e.*, row_number() OVER (PARTITION BY encounter_id ORDER BY admit_ts) rn
+FROM encounters e WHERE encounter_type = 'IP' AND admit_ts IS NOT NULL
+) x WHERE rn = 1
+), monthly AS (
+SELECT m.month_key, e.department,
+sum(CASE WHEN substr(e.admit_ts,1,7) = m.month_key THEN 1 ELSE 0 END) admissions,
+sum(CASE WHEN substr(e.admit_ts,1,7) = m.month_key
+AND e.bed_id = 'OVERFLOW' THEN 1 ELSE 0 END) overflow_admissions,
+sum(CASE WHEN e.bed_id LIKE 'W%'
+THEN greatest(0, datediff(least(to_date(coalesce(e.discharge_ts,
+date_add(to_date(e.admit_ts),1))),
+to_date(m.next_date)),
+greatest(to_date(e.admit_ts), to_date(m.start_date))))
+ELSE 0 END) ward_bed_days
+FROM months m JOIN clean e
+ON to_date(e.admit_ts) < to_date(m.next_date)
+AND to_date(coalesce(e.discharge_ts, date_add(to_date(e.admit_ts),1))) >= to_date(m.start_date)
+GROUP BY m.month_key, e.department
+)
+SELECT month_key, department, grouping__id AS grouping_id,
+sum(admissions) AS admissions, sum(overflow_admissions) AS overflow_admissions,
+sum(ward_bed_days) AS ward_bed_days
+FROM monthly
+GROUP BY month_key, department WITH ROLLUP
+ORDER BY month_key, department
+INFO  : Query ID = hive_20261123193558_819f1f67-18ec-4358-927b-2a21fdb7dec7
+INFO  : Total jobs = 1
+INFO  : Launching Job 1 out of 1
+INFO  : Starting task [Stage-1:MAPRED] in serial mode
+INFO  : Subscribed to counters: [] for queryId: hive_20261123193558_819f1f67-18ec-4358-927b-2a21fdb7dec7
+INFO  : Tez session hasn't been created yet. Opening session
+INFO  : Dag name: WITH clean AS (
+SELEC......h_key, department (Stage-1)
+INFO  : Setting tez.task.scale.memory.reserve-fraction to 0.30000001192092896
+INFO  : HS2 Host: [b61e5e9a413e], Query ID: [hive_20261123193558_819f1f67-18ec-4358-927b-2a21fdb7dec7], Dag ID: [dag_1795462560550_0001_1], DAG Session ID: [application_1795462560550_0001]
+INFO  : Status: Running (Executing on YARN cluster with App id application_1795462560550_0001)
+
+[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2            container        INITED      1          0        0        1       0       0  
+Map 1            container        INITED      1          0        0        1       0       0  
+Reducer 3        container        INITED      1          0        0        1       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+Reducer 5        container        INITED      1          0        0        1       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 00/06  [>>--------------------------] 0%    ELAPSED TIME: 0.67 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1            container        INITED      1          0        0        1       0       0  
+Reducer 3        container        INITED      1          0        0        1       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+Reducer 5        container        INITED      1          0        0        1       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/06  [====>>----------------------] 16%   ELAPSED TIME: 1.18 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1            container        INITED      1          0        0        1       0       0  
+Reducer 3        container        INITED      1          0        0        1       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+Reducer 5        container        INITED      1          0        0        1       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/06  [====>>----------------------] 16%   ELAPSED TIME: 1.71 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3        container        INITED      1          0        0        1       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+Reducer 5        container        INITED      1          0        0        1       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 02/06  [========>>------------------] 33%   ELAPSED TIME: 2.22 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3        container       RUNNING      1          0        1        0       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+Reducer 5        container        INITED      1          0        0        1       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 02/06  [========>>------------------] 33%   ELAPSED TIME: 2.90 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+Reducer 5        container        INITED      1          0        0        1       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 03/06  [=============>>-------------] 50%   ELAPSED TIME: 3.42 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+Reducer 5        container        INITED      1          0        0        1       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 03/06  [=============>>-------------] 50%   ELAPSED TIME: 3.93 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 4 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 5        container        INITED      1          0        0        1       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 04/06  [=================>>---------] 66%   ELAPSED TIME: 4.44 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 4 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 5        container        INITED      1          0        0        1       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 04/06  [=================>>---------] 66%   ELAPSED TIME: 4.95 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 4 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 5 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 05/06  [=====================>>-----] 83%   ELAPSED TIME: 5.48 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 4 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 5 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 6        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 05/06  [=====================>>-----] 83%   ELAPSED TIME: 7.17 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[12A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 4 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 5 ...... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 6 ...... container     SUCCEEDED      1          1        0        0       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 06/06  [==========================>>] 100%  ELAPSED TIME: 7.43 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+INFO  : Completed executing command(queryId=hive_20261123193558_819f1f67-18ec-4358-927b-2a21fdb7dec7); Time taken: 8.337 seconds
+2024-01	BARI	0	2	0	6
+2024-01	CARD	0	8	0	42
+2024-01	GIM	0	8	1	29
+2024-01	GSURG	0	3	0	7
+2024-01	ICU	0	16	0	0
+2024-01	NEUR	0	1	0	0
+2024-01	OBGY	0	6	0	13
+2024-01	ONC	0	3	0	16
+2024-01	ORTH	0	2	0	9
+2024-01	PED	0	4	0	7
+2024-01	NULL	1	53	1	129
+2024-02	CARD	0	6	0	16
+2024-02	GIM	0	10	0	41
+2024-02	GSURG	0	9	0	23
+2024-02	ICU	0	14	0	0
+2024-02	NEUR	0	3	0	6
+2024-02	OBGY	0	1	0	3
+2024-02	ONC	0	1	0	6
+2024-02	ORTH	0	5	0	9
+2024-02	PED	0	3	0	5
+2024-02	NULL	1	52	0	109
+2024-03	CARD	0	6	0	28
+2024-03	GIM	0	6	0	16
+2024-03	GSURG	0	5	0	17
+2024-03	ICU	0	14	0	0
+2024-03	NEUR	0	2	0	13
+2024-03	OBGY	0	5	0	11
+2024-03	ONC	0	2	0	13
+2024-03	ORTH	0	4	0	24
+2024-03	PED	0	4	1	5
+2024-03	NULL	1	48	1	127
+2024-04	CARD	0	11	2	46
+2024-04	GIM	0	9	0	24
+2024-04	GSURG	0	3	0	8
+2024-04	ICU	0	16	0	0
+2024-04	NEUR	0	2	0	5
+2024-04	OBGY	0	3	0	7
+2024-04	ORTH	0	5	0	16
+2024-04	PED	0	4	1	10
+2024-04	NULL	1	53	3	116
+2024-05	BARI	0	2	0	2
+2024-05	CARD	0	4	0	14
+2024-05	GIM	0	8	0	30
+2024-05	GSURG	0	5	0	13
+2024-05	ICU	0	13	0	0
+2024-05	NEUR	0	3	0	14
+2024-05	OBGY	0	5	0	18
+2024-05	ORTH	0	3	0	11
+2024-05	PED	0	4	0	10
+2024-05	NULL	1	47	0	112
+2024-06	CARD	0	6	0	15
+2024-06	GIM	0	9	0	36
+2024-06	GSURG	0	8	0	17
+2024-06	ICU	0	19	0	0
+2024-06	NEUR	0	2	0	7
+2024-06	OBGY	0	3	0	7
+2024-06	ONC	0	2	0	3
+2024-06	ORTH	0	3	0	12
+2024-06	PED	0	5	0	7
+2024-06	NULL	1	57	0	104
+2024-07	CARD	0	4	0	20
+2024-07	GIM	0	2	0	16
+2024-07	GSURG	0	6	0	17
+2024-07	ICU	0	9	0	0
+2024-07	NEUR	0	1	0	2
+2024-07	OBGY	0	5	0	16
+2024-07	ONC	0	1	0	11
+2024-07	ORTH	0	5	0	15
+2024-07	PED	0	2	0	4
+2024-07	NULL	1	35	0	101
+2024-08	BARI	0	2	0	8
+2024-08	CARD	0	4	0	11
+2024-08	GIM	0	7	0	25
+2024-08	GSURG	0	1	0	6
+2024-08	ICU	0	12	0	0
+2024-08	NEUR	0	5	0	27
+2024-08	OBGY	0	1	0	1
+2024-08	ONC	0	3	0	9
+2024-08	ORTH	0	5	0	17
+2024-08	PED	0	4	0	10
+2024-08	NULL	1	44	0	114
+2024-09	CARD	0	10	0	26
+2024-09	GIM	0	12	1	26
+2024-09	GSURG	0	2	0	3
+2024-09	ICU	0	12	0	0
+2024-09	NEUR	0	2	0	15
+2024-09	OBGY	0	8	0	13
+2024-09	ORTH	0	3	0	15
+2024-09	NULL	1	49	1	98
+2024-10	BARI	0	1	0	6
+2024-10	CARD	0	3	0	6
+2024-10	GIM	0	6	0	28
+2024-10	GSURG	0	7	0	13
+2024-10	ICU	0	16	0	0
+2024-10	NEUR	0	2	0	8
+2024-10	OBGY	0	2	0	11
+2024-10	ONC	0	2	0	9
+2024-10	ORTH	0	10	0	24
+2024-10	PED	0	1	0	6
+2024-10	NULL	1	50	0	111
+2024-11	BARI	0	1	0	3
+2024-11	CARD	0	4	0	16
+2024-11	GIM	0	5	1	9
+2024-11	GSURG	0	7	1	33
+2024-11	ICU	0	14	0	0
+2024-11	NEUR	0	2	0	7
+2024-11	OBGY	0	1	0	1
+2024-11	ONC	0	1	0	8
+2024-11	ORTH	0	6	0	34
+2024-11	PED	0	4	0	8
+2024-11	NULL	1	45	2	119
+2024-12	BARI	0	2	0	5
+2024-12	CARD	0	11	1	38
+2024-12	GIM	0	9	0	41
+2024-12	GSURG	0	2	0	3
+2024-12	ICU	0	13	0	0
+2024-12	NEUR	0	2	0	18
+2024-12	OBGY	0	7	0	23
+2024-12	ONC	0	1	0	6
+2024-12	ORTH	0	2	0	3
+2024-12	PED	0	1	0	6
+2024-12	NULL	1	50	1	143
+2025-01	BARI	0	0	0	1
+2025-01	CARD	0	10	4	32
+2025-01	GIM	0	15	1	50
+2025-01	GSURG	0	3	0	5
+2025-01	ICU	0	17	0	0
+2025-01	NEUR	0	3	2	9
+2025-01	OBGY	0	4	1	13
+2025-01	ONC	0	1	0	18
+2025-01	ORTH	0	8	0	27
+2025-01	PED	0	3	1	4
+2025-01	NULL	1	64	9	159
+2025-02	BARI	0	3	0	8
+2025-02	CARD	0	3	0	20
+2025-02	GIM	0	12	1	45
+2025-02	GSURG	0	3	0	7
+2025-02	ICU	0	14	0	0
+2025-02	NEUR	0	2	0	5
+2025-02	OBGY	0	5	0	11
+2025-02	ONC	0	3	0	35
+2025-02	ORTH	0	5	1	17
+2025-02	PED	0	4	1	9
+2025-02	NULL	1	54	3	157
+2025-03	CARD	0	7	0	20
+2025-03	GIM	0	15	0	64
+2025-03	GSURG	0	6	1	21
+2025-03	ICU	0	17	0	0
+2025-03	NEUR	0	1	0	5
+2025-03	OBGY	0	1	0	3
+2025-03	ONC	0	1	0	7
+2025-03	ORTH	0	2	0	4
+2025-03	PED	0	3	0	5
+2025-03	NULL	1	53	1	129
+2025-04	CARD	0	4	0	26
+2025-04	GIM	0	5	0	23
+2025-04	GSURG	0	7	0	18
+2025-04	ICU	0	16	0	0
+2025-04	NEUR	0	2	0	6
+2025-04	OBGY	0	4	0	5
+2025-04	ORTH	0	4	0	9
+2025-04	PED	0	3	0	7
+2025-04	NULL	1	45	0	94
+2025-05	CARD	0	4	0	20
+2025-05	GIM	0	4	0	13
+2025-05	GSURG	0	6	0	22
+2025-05	ICU	0	10	0	0
+2025-05	OBGY	0	5	0	11
+2025-05	ONC	0	1	0	2
+2025-05	ORTH	0	5	0	16
+2025-05	PED	0	2	0	3
+2025-05	NULL	1	37	0	87
+2025-06	BARI	0	1	0	1
+2025-06	CARD	0	3	0	15
+2025-06	GIM	0	9	0	24
+2025-06	GSURG	0	4	0	12
+2025-06	ICU	0	8	0	0
+2025-06	NEUR	0	1	0	3
+2025-06	OBGY	0	3	0	3
+2025-06	ORTH	0	3	0	6
+2025-06	PED	0	2	0	12
+2025-06	NULL	1	34	0	76
+2025-07	CARD	0	5	0	33
+2025-07	GIM	0	6	0	24
+2025-07	GSURG	0	3	0	7
+2025-07	ICU	0	14	0	0
+2025-07	NEUR	0	3	0	11
+2025-07	OBGY	0	4	0	10
+2025-07	ORTH	0	3	0	22
+2025-07	PED	0	1	0	3
+2025-07	NULL	1	39	0	110
+2025-08	CARD	0	8	0	22
+2025-08	GIM	0	4	0	13
+2025-08	GSURG	0	1	0	2
+2025-08	ICU	0	14	0	0
+2025-08	NEUR	0	1	0	8
+2025-08	OBGY	0	1	0	9
+2025-08	ONC	0	2	0	13
+2025-08	ORTH	0	2	0	15
+2025-08	NULL	1	33	0	82
+2025-09	BARI	0	1	0	1
+2025-09	CARD	0	4	0	13
+2025-09	GIM	0	9	0	25
+2025-09	GSURG	0	3	0	5
+2025-09	ICU	0	12	0	0
+2025-09	OBGY	0	3	0	8
+2025-09	ONC	0	2	0	15
+2025-09	ORTH	0	3	0	16
+2025-09	PED	0	4	0	13
+2025-09	NULL	1	41	0	96
+2025-10	BARI	0	2	0	3
+2025-10	CARD	0	4	0	20
+2025-10	GIM	0	5	1	19
+2025-10	GSURG	0	5	0	15
+2025-10	ICU	0	19	0	0
+2025-10	OBGY	0	7	0	17
+2025-10	ONC	0	3	0	17
+2025-10	ORTH	0	2	0	9
+2025-10	PED	0	3	1	3
+2025-10	NULL	1	50	2	103
+2025-11	BARI	0	1	0	1
+2025-11	CARD	0	6	0	13
+2025-11	GIM	0	4	0	8
+2025-11	GSURG	0	7	0	21
+2025-11	ICU	0	15	0	0
+2025-11	OBGY	0	2	0	8
+2025-11	ORTH	0	4	0	12
+2025-11	PED	0	3	0	12
+2025-11	NULL	1	42	0	75
+2025-12	CARD	0	8	1	35
+2025-12	GIM	0	10	1	27
+2025-12	GSURG	0	3	0	9
+2025-12	ICU	0	13	0	0
+2025-12	NEUR	0	3	0	13
+2025-12	OBGY	0	2	0	3
+2025-12	ONC	0	3	0	15
+2025-12	ORTH	0	4	0	12
+2025-12	PED	0	2	0	9
+2025-12	NULL	1	48	2	123
+NULL	NULL	3	1123	26	2674
+240 rows selected (10.075 seconds)
+0: jdbc:hive2://localhost:10000/default> 
+0: jdbc:hive2://localhost:10000/default> [WARN] Failed to create directory: /home/hive/.beeline
+No such file or directory
+Closing: 0: jdbc:hive2://localhost:10000/default

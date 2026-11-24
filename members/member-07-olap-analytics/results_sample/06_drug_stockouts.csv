@@ -1,0 +1,4 @@
+requested_drug,month_key,affected_dispenses,delayed,substituted,no_recent_receipt
+RX004,2024-11,36,23,13,36
+RX004,2025-09,27,14,13,27
+RX005,2025-02,80,54,26,80

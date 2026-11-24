@@ -1,0 +1,539 @@
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/opt/hive/lib/log4j-slf4j-impl-2.18.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/opt/hadoop/share/hadoop/common/lib/slf4j-reload4j-1.7.36.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/opt/hive/lib/log4j-slf4j-impl-2.18.0.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/opt/hadoop/share/hadoop/common/lib/slf4j-reload4j-1.7.36.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+Connecting to jdbc:hive2://localhost:10000/default
+Connected to: Apache Hive (version 4.0.1)
+Driver: Hive JDBC (version 4.0.1)
+Transaction isolation: TRANSACTION_REPEATABLE_READ
+26/11/24 14:27:48 [main]: WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+0: jdbc:hive2://localhost:10000/default> -- P5: Payer x department x year CUBE, with focused ORTH/BARI day-case/IP cohort.
+0: jdbc:hive2://localhost:10000/default> USE ahd_member7;
+INFO  : Compiling command(queryId=hive_20261124142748_ce3eb17e-a017-4b50-9ca9-6ad1cb452cde): USE ahd_member7
+INFO  : Semantic Analysis Completed (retrial = false)
+INFO  : Created Hive schema: Schema(fieldSchemas:null, properties:null)
+INFO  : Completed compiling command(queryId=hive_20261124142748_ce3eb17e-a017-4b50-9ca9-6ad1cb452cde); Time taken: 0.016 seconds
+INFO  : Concurrency mode is disabled, not creating a lock manager
+INFO  : Executing command(queryId=hive_20261124142748_ce3eb17e-a017-4b50-9ca9-6ad1cb452cde): USE ahd_member7
+INFO  : Starting task [Stage-0:DDL] in serial mode
+INFO  : Completed executing command(queryId=hive_20261124142748_ce3eb17e-a017-4b50-9ca9-6ad1cb452cde); Time taken: 0.007 seconds
+No rows affected (0.146 seconds)
+0: jdbc:hive2://localhost:10000/default> WITH base AS (
+. . . . . . . . . . . . . . . . . . . .>   SELECT c.claim_id, c.payer, e.department, substr(c.submitted_ts,1,4) claim_year,
+. . . . . . . . . . . . . . . . . . . .>          c.status, c.denial_code
+. . . . . . . . . . . . . . . . . . . .>   FROM claims c JOIN encounters e ON c.encounter_id = e.encounter_id
+. . . . . . . . . . . . . . . . . . . .>   WHERE c.resubmission_of IS NULL AND coalesce(c.denial_code,'') <> 'DUP-004'
+. . . . . . . . . . . . . . . . . . . .>     AND e.encounter_type IN ('IP','DAY')
+. . . . . . . . . . . . . . . . . . . .> ), cube_data AS (
+. . . . . . . . . . . . . . . . . . . .>   SELECT payer, department, claim_year, grouping__id AS grouping_id,
+. . . . . . . . . . . . . . . . . . . .>          count(DISTINCT claim_id) first_claims,
+. . . . . . . . . . . . . . . . . . . .>          count(DISTINCT CASE WHEN status='DENIED' THEN claim_id END) denied,
+. . . . . . . . . . . . . . . . . . . .>          count(DISTINCT CASE WHEN denial_code='AUTH-002' THEN claim_id END) auth002_denials
+. . . . . . . . . . . . . . . . . . . .>   FROM base GROUP BY payer, department, claim_year WITH CUBE
+. . . . . . . . . . . . . . . . . . . .> )
+. . . . . . . . . . . . . . . . . . . .> SELECT *, round(100.0*denied/first_claims,2) denial_pct,
+. . . . . . . . . . . . . . . . . . . .>           round(100.0*auth002_denials/first_claims,2) auth002_pct
+. . . . . . . . . . . . . . . . . . . .> FROM cube_data ORDER BY grouping_id,payer,department,claim_year;
+INFO  : Compiling command(queryId=hive_20261124142749_fb7d2d5a-a881-475c-a34f-9d293d7ee27f): WITH base AS (
+SELECT c.claim_id, c.payer, e.department, substr(c.submitted_ts,1,4) claim_year,
+c.status, c.denial_code
+FROM claims c JOIN encounters e ON c.encounter_id = e.encounter_id
+WHERE c.resubmission_of IS NULL AND coalesce(c.denial_code,'') <> 'DUP-004'
+AND e.encounter_type IN ('IP','DAY')
+), cube_data AS (
+SELECT payer, department, claim_year, grouping__id AS grouping_id,
+count(DISTINCT claim_id) first_claims,
+count(DISTINCT CASE WHEN status='DENIED' THEN claim_id END) denied,
+count(DISTINCT CASE WHEN denial_code='AUTH-002' THEN claim_id END) auth002_denials
+FROM base GROUP BY payer, department, claim_year WITH CUBE
+)
+SELECT *, round(100.0*denied/first_claims,2) denial_pct,
+round(100.0*auth002_denials/first_claims,2) auth002_pct
+FROM cube_data ORDER BY grouping_id,payer,department,claim_year
+INFO  : No Stats for ahd_member7@claims, Columns: submitted_ts, resubmission_of, denial_code, claim_id, encounter_id, payer, status
+INFO  : No Stats for ahd_member7@encounters, Columns: encounter_id, department, encounter_type
+INFO  : Semantic Analysis Completed (retrial = false)
+INFO  : Created Hive schema: Schema(fieldSchemas:[FieldSchema(name:cube_data.payer, type:string, comment:null), FieldSchema(name:cube_data.department, type:string, comment:null), FieldSchema(name:cube_data.claim_year, type:string, comment:null), FieldSchema(name:cube_data.grouping_id, type:bigint, comment:null), FieldSchema(name:cube_data.first_claims, type:bigint, comment:null), FieldSchema(name:cube_data.denied, type:bigint, comment:null), FieldSchema(name:cube_data.auth002_denials, type:bigint, comment:null), FieldSchema(name:denial_pct, type:decimal(26,2), comment:null), FieldSchema(name:auth002_pct, type:decimal(26,2), comment:null)], properties:null)
+INFO  : Completed compiling command(queryId=hive_20261124142749_fb7d2d5a-a881-475c-a34f-9d293d7ee27f); Time taken: 0.473 seconds
+INFO  : Concurrency mode is disabled, not creating a lock manager
+INFO  : Executing command(queryId=hive_20261124142749_fb7d2d5a-a881-475c-a34f-9d293d7ee27f): WITH base AS (
+SELECT c.claim_id, c.payer, e.department, substr(c.submitted_ts,1,4) claim_year,
+c.status, c.denial_code
+FROM claims c JOIN encounters e ON c.encounter_id = e.encounter_id
+WHERE c.resubmission_of IS NULL AND coalesce(c.denial_code,'') <> 'DUP-004'
+AND e.encounter_type IN ('IP','DAY')
+), cube_data AS (
+SELECT payer, department, claim_year, grouping__id AS grouping_id,
+count(DISTINCT claim_id) first_claims,
+count(DISTINCT CASE WHEN status='DENIED' THEN claim_id END) denied,
+count(DISTINCT CASE WHEN denial_code='AUTH-002' THEN claim_id END) auth002_denials
+FROM base GROUP BY payer, department, claim_year WITH CUBE
+)
+SELECT *, round(100.0*denied/first_claims,2) denial_pct,
+round(100.0*auth002_denials/first_claims,2) auth002_pct
+FROM cube_data ORDER BY grouping_id,payer,department,claim_year
+INFO  : Query ID = hive_20261124142749_fb7d2d5a-a881-475c-a34f-9d293d7ee27f
+INFO  : Total jobs = 1
+INFO  : Launching Job 1 out of 1
+INFO  : Starting task [Stage-1:MAPRED] in serial mode
+INFO  : Subscribed to counters: [] for queryId: hive_20261124142749_fb7d2d5a-a881-475c-a34f-9d293d7ee27f
+INFO  : Tez session hasn't been created yet. Opening session
+INFO  : Dag name: WITH base AS (
+SELECT......rtment,claim_year (Stage-1)
+INFO  : Setting tez.task.scale.memory.reserve-fraction to 0.30000001192092896
+INFO  : HS2 Host: [96f2bfb01112], Query ID: [hive_20261124142749_fb7d2d5a-a881-475c-a34f-9d293d7ee27f], Dag ID: [dag_1795530469698_0001_1], DAG Session ID: [application_1795530469698_0001]
+INFO  : Status: Running (Executing on YARN cluster with App id application_1795530469698_0001)
+
+[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1            container       RUNNING      1          0        1        0       0       0  
+Map 2            container        INITED      1          0        0        1       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 00/04  [>>--------------------------] 0%    ELAPSED TIME: 1.23 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container        INITED      1          0        0        1       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 1.74 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 2.44 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 2.96 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 3.46 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 3.98 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 4.49 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 5.00 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 5.51 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 6.13 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 6.64 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 7.21 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 8.39 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 8.91 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 9.41 s     
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2            container       RUNNING      1          0        1        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 01/04  [=====>>---------------------] 20%   ELAPSED TIME: 10.42 s    
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3        container        INITED      2          0        0        2       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 02/04  [==========>>----------------] 40%   ELAPSED TIME: 11.45 s    
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3        container       RUNNING      2          0        1        1       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 02/04  [==========>>----------------] 40%   ELAPSED TIME: 12.53 s    
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3        container       RUNNING      2          0        1        1       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 02/04  [==========>>----------------] 40%   ELAPSED TIME: 13.54 s    
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3 ...    container       RUNNING      2          1        1        0       0       0  
+Reducer 4        container        INITED      1          0        0        1       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 02/04  [===============>>-----------] 60%   ELAPSED TIME: 14.55 s    
+[22;0m[2K----------------------------------------------------------------------------------------------
+[10A[2K----------------------------------------------------------------------------------------------
+[2K[36;1m        VERTICES      MODE        STATUS  TOTAL  COMPLETED  RUNNING  PENDING  FAILED  KILLED  
+[22;0m[2K----------------------------------------------------------------------------------------------
+[2KMap 1 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Map 2 .......... container     SUCCEEDED      1          1        0        0       0       0  
+Reducer 3 ...... container     SUCCEEDED      2          2        0        0       0       0  
+Reducer 4 ...... container     SUCCEEDED      1          1        0        0       0       0  
+[2K----------------------------------------------------------------------------------------------
+[2K[31;1mVERTICES: 04/04  [==========================>>] 100%  ELAPSED TIME: 14.74 s    
+[22;0m[2K----------------------------------------------------------------------------------------------
+INFO  : Completed executing command(queryId=hive_20261124142749_fb7d2d5a-a881-475c-a34f-9d293d7ee27f); Time taken: 15.066 seconds
+Desert Rose Insurance	BARI	2024	0	275	12	1	4.36	0.36
+Desert Rose Insurance	BARI	2025	0	258	21	3	8.14	1.16
+Desert Rose Insurance	CARD	2024	0	532	38	6	7.14	1.13
+Desert Rose Insurance	CARD	2025	0	558	36	2	6.45	0.36
+Desert Rose Insurance	GIM	2024	0	499	41	8	8.22	1.60
+Desert Rose Insurance	GIM	2025	0	552	57	9	10.33	1.63
+Desert Rose Insurance	GSURG	2024	0	644	42	2	6.52	0.31
+Desert Rose Insurance	GSURG	2025	0	696	49	6	7.04	0.86
+Desert Rose Insurance	ICU	2024	0	178	11	5	6.18	2.81
+Desert Rose Insurance	ICU	2025	0	214	11	0	5.14	0.00
+Desert Rose Insurance	NEUR	2024	0	72	7	0	9.72	0.00
+Desert Rose Insurance	NEUR	2025	0	110	8	1	7.27	0.91
+Desert Rose Insurance	OBGY	2024	0	445	29	6	6.52	1.35
+Desert Rose Insurance	OBGY	2025	0	448	39	6	8.71	1.34
+Desert Rose Insurance	ONC	2024	0	743	45	6	6.06	0.81
+Desert Rose Insurance	ONC	2025	0	762	62	9	8.14	1.18
+Desert Rose Insurance	ORTH	2024	0	550	32	7	5.82	1.27
+Desert Rose Insurance	ORTH	2025	0	529	41	7	7.75	1.32
+Desert Rose Insurance	PED	2024	0	159	9	1	5.66	0.63
+Desert Rose Insurance	PED	2025	0	149	14	1	9.40	0.67
+Emirates CarePlus	BARI	2024	0	463	33	3	7.13	0.65
+Emirates CarePlus	BARI	2025	0	449	36	3	8.02	0.67
+Emirates CarePlus	CARD	2024	0	1092	69	10	6.32	0.92
+Emirates CarePlus	CARD	2025	0	1103	77	9	6.98	0.82
+Emirates CarePlus	GIM	2024	0	1001	70	9	6.99	0.90
+Emirates CarePlus	GIM	2025	0	1027	72	12	7.01	1.17
+Emirates CarePlus	GSURG	2024	0	1269	83	11	6.54	0.87
+Emirates CarePlus	GSURG	2025	0	1301	78	8	6.00	0.61
+Emirates CarePlus	ICU	2024	0	419	28	3	6.68	0.72
+Emirates CarePlus	ICU	2025	0	389	32	1	8.23	0.26
+Emirates CarePlus	NEUR	2024	0	146	7	0	4.79	0.00
+Emirates CarePlus	NEUR	2025	0	191	13	1	6.81	0.52
+Emirates CarePlus	OBGY	2024	0	874	61	7	6.98	0.80
+Emirates CarePlus	OBGY	2025	0	821	67	10	8.16	1.22
+Emirates CarePlus	ONC	2024	0	1434	108	8	7.53	0.56
+Emirates CarePlus	ONC	2025	0	1496	109	18	7.29	1.20
+Emirates CarePlus	ORTH	2024	0	1035	80	11	7.73	1.06
+Emirates CarePlus	ORTH	2025	0	1021	71	7	6.95	0.69
+Emirates CarePlus	PED	2024	0	244	26	3	10.66	1.23
+Emirates CarePlus	PED	2025	0	290	19	2	6.55	0.69
+Falcon Medical Cover	BARI	2024	0	366	130	121	35.52	33.06
+Falcon Medical Cover	BARI	2025	0	347	131	122	37.75	35.16
+Falcon Medical Cover	CARD	2024	0	777	57	13	7.34	1.67
+Falcon Medical Cover	CARD	2025	0	810	54	4	6.67	0.49
+Falcon Medical Cover	GIM	2024	0	697	47	7	6.74	1.00
+Falcon Medical Cover	GIM	2025	0	730	55	8	7.53	1.10
+Falcon Medical Cover	GSURG	2024	0	902	78	12	8.65	1.33
+Falcon Medical Cover	GSURG	2025	0	901	58	12	6.44	1.33
+Falcon Medical Cover	ICU	2024	0	268	17	1	6.34	0.37
+Falcon Medical Cover	ICU	2025	0	262	24	4	9.16	1.53
+Falcon Medical Cover	NEUR	2024	0	108	10	1	9.26	0.93
+Falcon Medical Cover	NEUR	2025	0	123	11	2	8.94	1.63
+Falcon Medical Cover	OBGY	2024	0	565	42	3	7.43	0.53
+Falcon Medical Cover	OBGY	2025	0	583	40	3	6.86	0.51
+Falcon Medical Cover	ONC	2024	0	1063	81	8	7.62	0.75
+Falcon Medical Cover	ONC	2025	0	1101	62	9	5.63	0.82
+Falcon Medical Cover	ORTH	2024	0	786	277	263	35.24	33.46
+Falcon Medical Cover	ORTH	2025	0	751	298	282	39.68	37.55
+Falcon Medical Cover	PED	2024	0	185	9	1	4.86	0.54
+Falcon Medical Cover	PED	2025	0	192	18	2	9.38	1.04
+Global Expat Health	BARI	2024	0	253	17	0	6.72	0.00
+Global Expat Health	BARI	2025	0	251	21	3	8.37	1.20
+Global Expat Health	CARD	2024	0	577	41	10	7.11	1.73
+Global Expat Health	CARD	2025	0	571	46	3	8.06	0.53
+Global Expat Health	GIM	2024	0	494	30	3	6.07	0.61
+Global Expat Health	GIM	2025	0	514	41	6	7.98	1.17
+Global Expat Health	GSURG	2024	0	639	43	5	6.73	0.78
+Global Expat Health	GSURG	2025	0	711	47	4	6.61	0.56
+Global Expat Health	ICU	2024	0	177	15	1	8.47	0.56
+Global Expat Health	ICU	2025	0	197	8	2	4.06	1.02
+Global Expat Health	NEUR	2024	0	79	7	2	8.86	2.53
+Global Expat Health	NEUR	2025	0	80	9	0	11.25	0.00
+Global Expat Health	OBGY	2024	0	455	35	7	7.69	1.54
+Global Expat Health	OBGY	2025	0	438	30	4	6.85	0.91
+Global Expat Health	ONC	2024	0	741	49	8	6.61	1.08
+Global Expat Health	ONC	2025	0	790	57	9	7.22	1.14
+Global Expat Health	ORTH	2024	0	533	45	4	8.44	0.75
+Global Expat Health	ORTH	2025	0	530	46	8	8.68	1.51
+Global Expat Health	PED	2024	0	126	5	2	3.97	1.59
+Global Expat Health	PED	2025	0	145	11	2	7.59	1.38
+Gulf Shield Insurance	BARI	2024	0	555	39	4	7.03	0.72
+Gulf Shield Insurance	BARI	2025	0	576	38	4	6.60	0.69
+Gulf Shield Insurance	CARD	2024	0	1222	81	11	6.63	0.90
+Gulf Shield Insurance	CARD	2025	0	1281	97	15	7.57	1.17
+Gulf Shield Insurance	GIM	2024	0	1015	79	6	7.78	0.59
+Gulf Shield Insurance	GIM	2025	0	1157	80	14	6.91	1.21
+Gulf Shield Insurance	GSURG	2024	0	1486	104	10	7.00	0.67
+Gulf Shield Insurance	GSURG	2025	0	1530	99	13	6.47	0.85
+Gulf Shield Insurance	ICU	2024	0	390	28	4	7.18	1.03
+Gulf Shield Insurance	ICU	2025	0	430	30	4	6.98	0.93
+Gulf Shield Insurance	NEUR	2024	0	148	8	0	5.41	0.00
+Gulf Shield Insurance	NEUR	2025	0	172	6	1	3.49	0.58
+Gulf Shield Insurance	OBGY	2024	0	927	67	11	7.23	1.19
+Gulf Shield Insurance	OBGY	2025	0	956	64	3	6.69	0.31
+Gulf Shield Insurance	ONC	2024	0	1611	122	14	7.57	0.87
+Gulf Shield Insurance	ONC	2025	0	1705	120	13	7.04	0.76
+Gulf Shield Insurance	ORTH	2024	0	1121	74	14	6.60	1.25
+Gulf Shield Insurance	ORTH	2025	0	1141	71	8	6.22	0.70
+Gulf Shield Insurance	PED	2024	0	316	19	2	6.01	0.63
+Gulf Shield Insurance	PED	2025	0	307	17	5	5.54	1.63
+Oasis Health Assurance	BARI	2024	0	418	38	4	9.09	0.96
+Oasis Health Assurance	BARI	2025	0	387	27	2	6.98	0.52
+Oasis Health Assurance	CARD	2024	0	890	57	4	6.40	0.45
+Oasis Health Assurance	CARD	2025	0	950	80	7	8.42	0.74
+Oasis Health Assurance	GIM	2024	0	779	59	9	7.57	1.16
+Oasis Health Assurance	GIM	2025	0	809	66	8	8.16	0.99
+Oasis Health Assurance	GSURG	2024	0	1008	55	6	5.46	0.60
+Oasis Health Assurance	GSURG	2025	0	1038	73	10	7.03	0.96
+Oasis Health Assurance	ICU	2024	0	313	23	4	7.35	1.28
+Oasis Health Assurance	ICU	2025	0	302	16	1	5.30	0.33
+Oasis Health Assurance	NEUR	2024	0	124	9	0	7.26	0.00
+Oasis Health Assurance	NEUR	2025	0	127	12	0	9.45	0.00
+Oasis Health Assurance	OBGY	2024	0	637	36	9	5.65	1.41
+Oasis Health Assurance	OBGY	2025	0	712	51	10	7.16	1.40
+Oasis Health Assurance	ONC	2024	0	1216	102	14	8.39	1.15
+Oasis Health Assurance	ONC	2025	0	1227	88	12	7.17	0.98
+Oasis Health Assurance	ORTH	2024	0	877	84	14	9.58	1.60
+Oasis Health Assurance	ORTH	2025	0	822	75	16	9.12	1.95
+Oasis Health Assurance	PED	2024	0	258	15	1	5.81	0.39
+Oasis Health Assurance	PED	2025	0	235	16	4	6.81	1.70
+Desert Rose Insurance	BARI	NULL	1	533	33	4	6.19	0.75
+Desert Rose Insurance	CARD	NULL	1	1090	74	8	6.79	0.73
+Desert Rose Insurance	GIM	NULL	1	1051	98	17	9.32	1.62
+Desert Rose Insurance	GSURG	NULL	1	1340	91	8	6.79	0.60
+Desert Rose Insurance	ICU	NULL	1	392	22	5	5.61	1.28
+Desert Rose Insurance	NEUR	NULL	1	182	15	1	8.24	0.55
+Desert Rose Insurance	OBGY	NULL	1	893	68	12	7.61	1.34
+Desert Rose Insurance	ONC	NULL	1	1505	107	15	7.11	1.00
+Desert Rose Insurance	ORTH	NULL	1	1079	73	14	6.77	1.30
+Desert Rose Insurance	PED	NULL	1	308	23	2	7.47	0.65
+Emirates CarePlus	BARI	NULL	1	912	69	6	7.57	0.66
+Emirates CarePlus	CARD	NULL	1	2195	146	19	6.65	0.87
+Emirates CarePlus	GIM	NULL	1	2028	142	21	7.00	1.04
+Emirates CarePlus	GSURG	NULL	1	2570	161	19	6.26	0.74
+Emirates CarePlus	ICU	NULL	1	808	60	4	7.43	0.50
+Emirates CarePlus	NEUR	NULL	1	337	20	1	5.93	0.30
+Emirates CarePlus	OBGY	NULL	1	1695	128	17	7.55	1.00
+Emirates CarePlus	ONC	NULL	1	2930	217	26	7.41	0.89
+Emirates CarePlus	ORTH	NULL	1	2056	151	18	7.34	0.88
+Emirates CarePlus	PED	NULL	1	534	45	5	8.43	0.94
+Falcon Medical Cover	BARI	NULL	1	713	261	243	36.61	34.08
+Falcon Medical Cover	CARD	NULL	1	1587	111	17	6.99	1.07
+Falcon Medical Cover	GIM	NULL	1	1427	102	15	7.15	1.05
+Falcon Medical Cover	GSURG	NULL	1	1803	136	24	7.54	1.33
+Falcon Medical Cover	ICU	NULL	1	530	41	5	7.74	0.94
+Falcon Medical Cover	NEUR	NULL	1	231	21	3	9.09	1.30
+Falcon Medical Cover	OBGY	NULL	1	1148	82	6	7.14	0.52
+Falcon Medical Cover	ONC	NULL	1	2164	143	17	6.61	0.79
+Falcon Medical Cover	ORTH	NULL	1	1537	575	545	37.41	35.46
+Falcon Medical Cover	PED	NULL	1	377	27	3	7.16	0.80
+Global Expat Health	BARI	NULL	1	504	38	3	7.54	0.60
+Global Expat Health	CARD	NULL	1	1148	87	13	7.58	1.13
+Global Expat Health	GIM	NULL	1	1008	71	9	7.04	0.89
+Global Expat Health	GSURG	NULL	1	1350	90	9	6.67	0.67
+Global Expat Health	ICU	NULL	1	374	23	3	6.15	0.80
+Global Expat Health	NEUR	NULL	1	159	16	2	10.06	1.26
+Global Expat Health	OBGY	NULL	1	893	65	11	7.28	1.23
+Global Expat Health	ONC	NULL	1	1531	106	17	6.92	1.11
+Global Expat Health	ORTH	NULL	1	1063	91	12	8.56	1.13
+Global Expat Health	PED	NULL	1	271	16	4	5.90	1.48
+Gulf Shield Insurance	BARI	NULL	1	1131	77	8	6.81	0.71
+Gulf Shield Insurance	CARD	NULL	1	2503	178	26	7.11	1.04
+Gulf Shield Insurance	GIM	NULL	1	2172	159	20	7.32	0.92
+Gulf Shield Insurance	GSURG	NULL	1	3016	203	23	6.73	0.76
+Gulf Shield Insurance	ICU	NULL	1	820	58	8	7.07	0.98
+Gulf Shield Insurance	NEUR	NULL	1	320	14	1	4.38	0.31
+Gulf Shield Insurance	OBGY	NULL	1	1883	131	14	6.96	0.74
+Gulf Shield Insurance	ONC	NULL	1	3316	242	27	7.30	0.81
+Gulf Shield Insurance	ORTH	NULL	1	2262	145	22	6.41	0.97
+Gulf Shield Insurance	PED	NULL	1	623	36	7	5.78	1.12
+Oasis Health Assurance	BARI	NULL	1	805	65	6	8.07	0.75
+Oasis Health Assurance	CARD	NULL	1	1840	137	11	7.45	0.60
+Oasis Health Assurance	GIM	NULL	1	1588	125	17	7.87	1.07
+Oasis Health Assurance	GSURG	NULL	1	2046	128	16	6.26	0.78
+Oasis Health Assurance	ICU	NULL	1	615	39	5	6.34	0.81
+Oasis Health Assurance	NEUR	NULL	1	251	21	0	8.37	0.00
+Oasis Health Assurance	OBGY	NULL	1	1349	87	19	6.45	1.41
+Oasis Health Assurance	ONC	NULL	1	2443	190	26	7.78	1.06
+Oasis Health Assurance	ORTH	NULL	1	1699	159	30	9.36	1.77
+Oasis Health Assurance	PED	NULL	1	493	31	5	6.29	1.01
+Desert Rose Insurance	NULL	2024	2	4097	266	42	6.49	1.03
+Desert Rose Insurance	NULL	2025	2	4276	338	44	7.90	1.03
+Emirates CarePlus	NULL	2024	2	7977	565	65	7.08	0.81
+Emirates CarePlus	NULL	2025	2	8088	574	71	7.10	0.88
+Falcon Medical Cover	NULL	2024	2	5717	748	430	13.08	7.52
+Falcon Medical Cover	NULL	2025	2	5800	751	448	12.95	7.72
+Global Expat Health	NULL	2024	2	4074	287	42	7.04	1.03
+Global Expat Health	NULL	2025	2	4227	316	41	7.48	0.97
+Gulf Shield Insurance	NULL	2024	2	8791	621	76	7.06	0.86
+Gulf Shield Insurance	NULL	2025	2	9255	622	80	6.72	0.86
+Oasis Health Assurance	NULL	2024	2	6520	478	65	7.33	1.00
+Oasis Health Assurance	NULL	2025	2	6609	504	70	7.63	1.06
+Desert Rose Insurance	NULL	NULL	3	8373	604	86	7.21	1.03
+Emirates CarePlus	NULL	NULL	3	16065	1139	136	7.09	0.85
+Falcon Medical Cover	NULL	NULL	3	11517	1499	878	13.02	7.62
+Global Expat Health	NULL	NULL	3	8301	603	83	7.26	1.00
+Gulf Shield Insurance	NULL	NULL	3	18046	1243	156	6.89	0.86
+Oasis Health Assurance	NULL	NULL	3	13129	982	135	7.48	1.03
+NULL	BARI	2024	4	2330	269	133	11.55	5.71
+NULL	BARI	2025	4	2268	274	137	12.08	6.04
+NULL	CARD	2024	4	5090	343	54	6.74	1.06
+NULL	CARD	2025	4	5273	390	40	7.40	0.76
+NULL	GIM	2024	4	4485	326	42	7.27	0.94
+NULL	GIM	2025	4	4789	371	57	7.75	1.19
+NULL	GSURG	2024	4	5948	405	46	6.81	0.77
+NULL	GSURG	2025	4	6177	404	53	6.54	0.86
+NULL	ICU	2024	4	1745	122	18	6.99	1.03
+NULL	ICU	2025	4	1794	121	12	6.74	0.67
+NULL	NEUR	2024	4	677	48	3	7.09	0.44
+NULL	NEUR	2025	4	803	59	5	7.35	0.62
+NULL	OBGY	2024	4	3903	270	43	6.92	1.10
+NULL	OBGY	2025	4	3958	291	36	7.35	0.91
+NULL	ONC	2024	4	6808	507	58	7.45	0.85
+NULL	ONC	2025	4	7081	498	70	7.03	0.99
+NULL	ORTH	2024	4	4902	592	313	12.08	6.39
+NULL	ORTH	2025	4	4794	602	328	12.56	6.84
+NULL	PED	2024	4	1288	83	10	6.44	0.78
+NULL	PED	2025	4	1318	95	16	7.21	1.21
+NULL	BARI	NULL	5	4598	543	270	11.81	5.87
+NULL	CARD	NULL	5	10363	733	94	7.07	0.91
+NULL	GIM	NULL	5	9274	697	99	7.52	1.07
+NULL	GSURG	NULL	5	12125	809	99	6.67	0.82
+NULL	ICU	NULL	5	3539	243	30	6.87	0.85
+NULL	NEUR	NULL	5	1480	107	8	7.23	0.54
+NULL	OBGY	NULL	5	7861	561	79	7.14	1.00
+NULL	ONC	NULL	5	13889	1005	128	7.24	0.92
+NULL	ORTH	NULL	5	9696	1194	641	12.31	6.61
+NULL	PED	NULL	5	2606	178	26	6.83	1.00
+NULL	NULL	2024	6	37176	2965	720	7.98	1.94
+NULL	NULL	2025	6	38255	3105	754	8.12	1.97
+NULL	NULL	NULL	7	75431	6070	1474	8.05	1.95
+231 rows selected (15.653 seconds)
+0: jdbc:hive2://localhost:10000/default> 
+0: jdbc:hive2://localhost:10000/default> [WARN] Failed to create directory: /home/hive/.beeline
+No such file or directory
+Closing: 0: jdbc:hive2://localhost:10000/default
